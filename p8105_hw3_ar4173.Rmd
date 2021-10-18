@@ -79,16 +79,41 @@ brfss_smart2010 =
 library(p8105.datasets)
 data("brfss_smart2010")
 
-brfss_data=
-brfss_smart2010 %>% 
+health_brfss=
+force(brfss_smart2010) %>% 
   janitor::clean_names() %>% 
-  filter(topic=="Overall Health" )
-
-
+  filter(topic=="Overall Health" ) %>% 
+  filter(response %in% c("Poor","Fair","Good","Very Good","Excellent")) %>% 
+  mutate(
+  response_order=ordered(response,levels=c("Poor","Fair","Good","Very Good","Excellent"))) %>% 
+  group_by(response_order)
 
 ```
 
 ```{r}
+health_brfss %>%
+  filter(year==2002) %>%
+  group_by(locationabbr) %>% 
+  summarize(n_obs = n()) %>% 
+  filter(n_obs>=7)
 
+health_brfss %>%
+  filter(year==2010) %>%
+  group_by(locationabbr) %>% 
+  summarize(n_obs = n()) %>% 
+  filter(n_obs>=7)
+```
+
+
+```{r}
+mean_data = 
+health_brfss %>%
+  filter(response=="Excellent") %>% 
+  group_by(locationabbr) %>% 
+  mutate(
+    mean_data_value=mean(data_value)
+  ) %>% 
+  select(year, response,locationabbr,mean_data_value) %>% 
+  distinct()
 ```
 
