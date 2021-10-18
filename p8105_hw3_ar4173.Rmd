@@ -1,0 +1,94 @@
+---
+title: "p8105_hw3_ar4173"
+author: "Anand Rajan"
+date: "10/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+
+```{r}
+library(p8105.datasets)
+data("instacart")
+
+instacart
+```
+
+
+```{r}
+instacart %>% 
+  group_by(order_id) %>% 
+  summarize(n_obs =n())
+
+instacart %>% 
+  group_by(department) %>% 
+  summarize(n_obs=n())
+
+instacart %>% 
+  group_by(order_id, user_id) %>% 
+  summarize(
+    mean_days_prior=mean(days_since_prior_order)
+  )
+
+
+
+```
+
+## problem 2
+
+
+```{r pressure, echo=FALSE}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+
+var_names = 
+  GET("https://chronicdata.cdc.gov/views/acme-vg9e.json") %>%
+  content("text") %>%
+  fromJSON() %>% 
+  .[["columns"]] %>% 
+  .[["name"]] %>% 
+  .[1:22]
+
+brfss_smart2010 = 
+  GET("https://chronicdata.cdc.gov/views/acme-vg9e/rows.json") %>% 
+  content("text") %>%
+  fromJSON() %>% 
+  .[["data"]]
+
+row_as_tibble = function(row_as_list, var_names) {
+  var_list = row_as_list[9:30]
+  names(var_list) = var_names 
+  var_list[sapply(var_list, is.null)] <- NULL
+  as_tibble(var_list, validate = FALSE)
+}
+
+brfss_smart2010 = 
+  brfss_smart2010 %>% 
+  map(.x = ., ~row_as_tibble(.x, var_names)) %>% 
+  bind_rows
+```
+
+```{r}
+library(p8105.datasets)
+data("brfss_smart2010")
+
+brfss_data=
+brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  filter(topic=="Overall Health" )
+
+
+
+```
+
+```{r}
+
+```
+
