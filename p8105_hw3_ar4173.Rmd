@@ -20,7 +20,7 @@ data("instacart")
 instacart
 ```
 
-```{r eval=FALSE warning=FALSE}
+```{r eval=FALSE, warning=FALSE}
 From opening the dataset, we see there are 1,384,617 observations and 15 variables. 
 ```
 
@@ -73,48 +73,52 @@ popular_items =
     aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")
   ) %>% 
   group_by(aisle) %>% 
-  count(product_name, name="count") %>% 
-  arrange(desc(count))
-  knitr::kable()
+  count(product_name, name="order_count") %>% 
+  mutate(
+    product_rank = min_rank(desc(order_count))
+  ) %>% 
+  filter(product_rank <= 3) %>% 
+  select(-product_rank) 
 
-  
-popular_items
+
+  knitr::kable(popular_items, format="markdown")
+
+```
+
+
+```{r}
+
+order_hour =
+  instacart %>% 
+  mutate(
+    order_dow = recode(order_dow, 
+                       "0"="Sunday", 
+                       "1"="Monday", 
+                       "2"="Tuesday", 
+                       "3"="Wednesday", 
+                       "4"="Thursday", 
+                       "5"="Friday", 
+                       "6"="Saturday")
+  ) %>% 
+  group_by(product_name, order_dow) %>%
+  filter(
+    product_name %in% c("Pink Lady Apples","Coffee Ice Cream")) %>% 
+  summarize(mean_hour=(mean(order_hour_of_day))) %>% 
+  mutate(
+    day_of_the_week=ordered(order_dow,c("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"))
+  ) %>% 
+  arrange(day_of_the_week) %>% 
+  select(-order_dow) %>% 
+  pivot_wider(
+    names_from="day_of_the_week",
+    values_from="mean_hour"
+  )
+
+
+knitr::kable(order_hour,format="markdown")
 ```
 
 ## problem 2
-
-
-```{r pressure, echo=FALSE}
-library(tidyverse)
-library(httr)
-library(jsonlite)
-
-var_names = 
-  GET("https://chronicdata.cdc.gov/views/acme-vg9e.json") %>%
-  content("text") %>%
-  fromJSON() %>% 
-  .[["columns"]] %>% 
-  .[["name"]] %>% 
-  .[1:22]
-
-brfss_smart2010 = 
-  GET("https://chronicdata.cdc.gov/views/acme-vg9e/rows.json") %>% 
-  content("text") %>%
-  fromJSON() %>% 
-  .[["data"]]
-
-row_as_tibble = function(row_as_list, var_names) {
-  var_list = row_as_list[9:30]
-  names(var_list) = var_names 
-  var_list[sapply(var_list, is.null)] <- NULL
-  as_tibble(var_list, validate = FALSE)
-}
-
-brfss_smart2010 = 
-  brfss_smart2010 %>% 
-  map(.x = ., ~row_as_tibble(.x, var_names)) %>% 
-  bind_rows
-```
 
 ```{r}
 library(p8105.datasets)
@@ -125,10 +129,8 @@ force(brfss_smart2010) %>%
   janitor::clean_names() %>% 
   filter(topic=="Overall Health" ) %>% 
   filter(response %in% c("Poor","Fair","Good","Very Good","Excellent")) %>% 
-  mutate(
-  response_order=ordered(response,levels=c("Poor","Fair","Good","Very Good","Excellent"))) %>% 
-  group_by(response_order) %>% 
-  drop_na(data_value)
+  arrange(desc(response))
+  
 
 ```
 
@@ -151,14 +153,15 @@ health_brfss %>%
 mean_data = 
 health_brfss %>%
   filter(response=="Excellent") %>% 
+  drop_na(data_value) %>% 
   group_by(locationabbr) %>% 
   mutate(
     mean_data_value=mean(data_value)
   ) %>% 
-  select(year, response,locationabbr,mean_data_value) %>% 
+  select(year,locationabbr,mean_data_value) %>% 
   distinct()
 
-ggplot(data=mean_data, aes)
+
 
 
 ```
