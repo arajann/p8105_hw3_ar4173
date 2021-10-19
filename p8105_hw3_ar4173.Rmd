@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(tidyverse)
-
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -20,11 +20,25 @@ data("instacart")
 instacart
 ```
 
+```{r eval=FALSE warning=FALSE}
+From opening the dataset, we see there are 1,384,617 observations and 15 variables. 
+```
+
+
 
 ```{r}
-instacart %>% 
-  group_by(order_id) %>% 
-  summarize(n_obs =n())
+instacart_df =
+  instacart %>% 
+  group_by(aisle) %>% 
+  summarize(n_obs =n()) %>% 
+  arrange(desc(n_obs)) %>% 
+  mutate(
+    product_rank=order(n_obs,decreasing=TRUE)
+  )
+
+instacart_df
+
+
 
 instacart %>% 
   group_by(department) %>% 
@@ -38,6 +52,33 @@ instacart %>%
 
 
 
+```
+
+
+```{r}
+instacart_plot = 
+  instacart_df %>% 
+  filter(n_obs > 10000)
+
+ggplot(instacart_plot, aes(x= product_rank , y=n_obs)) + geom_point(aes(color=aisle))
+```
+
+
+
+
+```{r}
+popular_items =
+  instacart %>%
+  filter(
+    aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")
+  ) %>% 
+  group_by(aisle) %>% 
+  count(product_name, name="count") %>% 
+  arrange(desc(count))
+  knitr::kable()
+
+  
+popular_items
 ```
 
 ## problem 2
@@ -86,7 +127,8 @@ force(brfss_smart2010) %>%
   filter(response %in% c("Poor","Fair","Good","Very Good","Excellent")) %>% 
   mutate(
   response_order=ordered(response,levels=c("Poor","Fair","Good","Very Good","Excellent"))) %>% 
-  group_by(response_order)
+  group_by(response_order) %>% 
+  drop_na(data_value)
 
 ```
 
@@ -115,5 +157,9 @@ health_brfss %>%
   ) %>% 
   select(year, response,locationabbr,mean_data_value) %>% 
   distinct()
+
+ggplot(data=mean_data, aes)
+
+
 ```
 
