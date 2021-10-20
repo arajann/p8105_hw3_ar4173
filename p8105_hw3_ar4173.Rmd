@@ -121,7 +121,6 @@ knitr::kable(order_hour,format="markdown")
 ## problem 2
 
 ```{r}
-library(p8105.datasets)
 data("brfss_smart2010")
 
 health_brfss=
@@ -154,12 +153,30 @@ mean_data =
 health_brfss %>%
   filter(response=="Excellent") %>% 
   drop_na(data_value) %>% 
-  group_by(locationabbr) %>% 
+  group_by(locationabbr,year) %>% 
   mutate(
     mean_data_value=mean(data_value)
   ) %>% 
   select(year,locationabbr,mean_data_value) %>% 
   distinct()
+
+ggplot(mean_data, aes(x=year, y=mean_data_value, color=locationabbr)) +geom_line(se=FALSE)
+
+
+
+```
+
+
+
+```{r}
+
+health_brfss %>% 
+  filter(year== "2006" | year=="2010" , locationabbr=="NY") %>%
+  ggplot(aes(x=locationdesc, y= data_value)) + geom_point()
+
+facet_grid(.~year)
+  
+  
 
 
 
