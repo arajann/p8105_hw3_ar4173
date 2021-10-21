@@ -2,17 +2,19 @@
 title: "p8105_hw3_ar4173"
 author: "Anand Rajan"
 date: "10/17/2021"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(knitr)
-knitr::opts_chunk$set(echo = TRUE)
+library(p8105.datasets)
+knitr::opts_chunk$set(collapse = TRUE, message = FALSE)
 ```
 
 ## Problem 1
 
+Importing and Examining Dataset
 ```{r}
 library(p8105.datasets)
 data("instacart")
@@ -20,50 +22,41 @@ data("instacart")
 instacart
 ```
 
-```{r eval=FALSE, warning=FALSE}
-From opening the dataset, we see there are 1,384,617 observations and 15 variables. 
-```
 
+From opening the dataset, we see there are 1,384,617 observations described by 15 variables. The dataset groups products ordered by their order id, while having their own separate product id. Moreover, the dataset shows the day of the week(order_dow) and the hour of day the product was ordered. Finally we see in the dataset from which aisle and department each product is located in, each product has an associated product name. 
 
 
 ```{r}
 instacart_df =
   instacart %>% 
   group_by(aisle) %>% 
-  summarize(n_obs =n()) %>% 
-  arrange(desc(n_obs)) %>% 
+  summarize(items_ordered =n()) %>% 
+  arrange(desc(items_ordered)) %>% 
   mutate(
-    product_rank=order(n_obs,decreasing=TRUE)
+    aisle_rank=order(items_ordered,decreasing=TRUE)
   )
-
-instacart_df
-
-
-
-instacart %>% 
-  group_by(department) %>% 
-  summarize(n_obs=n())
-
-instacart %>% 
-  group_by(order_id, user_id) %>% 
-  summarize(
-    mean_days_prior=mean(days_since_prior_order)
-  )
-
-
 
 ```
 
+To see the number of aisles and the items ordered from each isle, I created a new dataframe that uses the group_by function. From this dataframe we see that there are 134 aisles. Furthermore, the aisles that had the most items ordered from were "fresh vegetables", "fresh fruits", "package vegetables fuits".  
 
 ```{r}
-instacart_plot = 
+instacart_plot_data = 
   instacart_df %>% 
-  filter(n_obs > 10000)
+  filter(items_ordered > 10000)
 
-ggplot(instacart_plot, aes(x= product_rank , y=n_obs)) + geom_point(aes(color=aisle))
+instacart_plot =
+  ggplot(instacart_plot_data, aes(x= aisle_rank , items_ordered)) + geom_point(aes(color=aisle)) + 
+  labs(
+    title = "Number of Items Ordered vs. Aisle rank",
+    x= "Aisle Rank",
+    y= "Number of Items Ordered"
+  )
+
+ggsave("instacart_plot.pdf", instacart_plot, width=8, height=5)
 ```
 
-
+In the plot above, I have created a new variable called aisle rank which ranks aisles based on the number of items ordered from that specific aisle. The higher the aisle rank the less amount of items were ordered from that aisle. Moreover, the aisles displayed are only the aisles that had over 10,000 items ordered from them. As we can see from the plot, there is a clear disparity of the top two aisles (fresh vegetables and fresh fruit) from the rest of the aisles. 
 
 
 ```{r}
@@ -78,16 +71,21 @@ popular_items =
     product_rank = min_rank(desc(order_count))
   ) %>% 
   filter(product_rank <= 3) %>% 
+  group_by(aisle) %>%
+    arrange(product_rank, .by_group = TRUE) %>% 
   select(-product_rank) 
 
 
-  knitr::kable(popular_items, format="markdown")
+
+knitr::kable(popular_items, 
+            format="simple", 
+            col.names=str_to_title(names(popular_items)))
 
 ```
 
+The table above shows the three most popular items ordered in each of the following aisles: "baking ingredients", "dog food care", and "packed vegetables fruits". As we can see from the table, among baking ingredients the most popular item is light brown sugar. In the aisle "dog food care", the most popular item is snack sticks. Finally in the aisle "packed vegetables fruits", the most popular item is Organic Baby Spinach. Furthermore this table shows us that the  order count of the most popular items from each of the aisles vastly differs between aisle to aisle. 
 
 ```{r}
-
 order_hour =
   instacart %>% 
   mutate(
@@ -115,11 +113,18 @@ order_hour =
   )
 
 
-knitr::kable(order_hour,format="markdown")
+knitr::kable(order_hour,
+             format="simple", 
+            col.names=str_to_title(names(order_hour))
+            )
 ```
 
-## problem 2
+The table above shows the mean hour of day(military time-hour) at which Pink Lady Apples and Coffee Ice cream were ordered throughout the week. During the week, Monday through Thursday, coffee ice cream was ordered at a later hour as opposed to the weekend. However, we did not observe such trend for the hour at which Pink Lady Apples were purchased. Furthermore, by comparing the distributions throughout the week, it seems that the average hour of the day at which coffee ice cream is ordered is later than the hour at which pink lady apples are. 
 
+
+## Problem 2
+
+Importing and Cleaning BRFSS Dataset
 ```{r}
 data("brfss_smart2010")
 
@@ -128,24 +133,63 @@ force(brfss_smart2010) %>%
   janitor::clean_names() %>% 
   filter(topic=="Overall Health" ) %>% 
   filter(response %in% c("Poor","Fair","Good","Very Good","Excellent")) %>% 
-  arrange(desc(response))
+  mutate(
+    response = 
+      recode(
+        response,
+        "Poor" = "1",
+        "Fair" = "2",
+        "Good" = "3",
+        "Very Good" = "4",
+        "Excellent" = "5"
+      ) 
+  ) %>% 
+  arrange((response)) %>% 
+  mutate(
+    response = recode(
+      response,
+        "1" = "Poor",
+        "2" = "Fair",
+        "3" = "Good",
+        "4" = "Very Good",
+        "5" = "Excellent",
+    )
+  ) %>% 
+  rename(
+    states= locationabbr,
+    county= locationdesc
+  ) %>% 
+  drop_na(data_value)
   
 
 ```
 
 ```{r}
+states_2002 =
 health_brfss %>%
   filter(year==2002) %>%
-  group_by(locationabbr) %>% 
-  summarize(n_obs = n()) %>% 
-  filter(n_obs>=7)
+  group_by(states) %>% 
+  summarize(location_count = n()) %>% 
+  filter(location_count>=7)
 
+knitr::kable(states_2002,
+             format="simple", 
+            col.names=str_to_title(names(states_2002))
+            )
+```
+
+The table above shows 36 states were observed at 7 or more locations in 2002. 
+
+```{r}
+states_2010 =
 health_brfss %>%
   filter(year==2010) %>%
-  group_by(locationabbr) %>% 
-  summarize(n_obs = n()) %>% 
-  filter(n_obs>=7)
+  group_by(states) %>% 
+  summarize(location_count = n()) %>% 
+  filter(location_count>=7)
 ```
+
+The table above shows 45 states were observed at 7 or more locations in 2010.
 
 
 ```{r}
@@ -153,33 +197,48 @@ mean_data =
 health_brfss %>%
   filter(response=="Excellent") %>% 
   drop_na(data_value) %>% 
-  group_by(locationabbr,year) %>% 
+  group_by(states,year) %>% 
   mutate(
-    mean_data_value=mean(data_value)
+    avg_data_value=mean(data_value)
   ) %>% 
-  select(year,locationabbr,mean_data_value) %>% 
+  select(year,states,avg_data_value) %>% 
   distinct()
 
-ggplot(mean_data, aes(x=year, y=mean_data_value, color=locationabbr)) +geom_line(se=FALSE)
+spaghetti_plot = 
+ggplot(mean_data, aes(x=year, y=avg_data_value, color=states)) +geom_line(se=FALSE) +
+    labs(
+    title = "Distribution of Average Data Values each Year, by States",
+    x= "Year",
+    y= "Average Data Value"
+  )
 
-
-
+ggsave("spaghetti_plot.pdf", spaghetti_plot, width=8, height=5)
 ```
 
+
+The spaghetti plot above shows the distribution of average data values throughout the years for each state. Among most of the states throughout the years, the average data value is between 20 and 25. 
 
 
 ```{r}
 
+ny_boxplot =
 health_brfss %>% 
-  filter(year== "2006" | year=="2010" , locationabbr=="NY") %>%
-  ggplot(aes(x=locationdesc, y= data_value)) + geom_point()
+  filter(year== "2006" | year=="2010" , states=="NY") %>%
+  ggplot(aes(x=response, y= data_value, color= response)) + geom_boxplot() +
+  facet_grid(.~year) +
+  labs(
+    title = "Distribution of Data Values for 2006 and 2010 in NY, by responses",
+    x= "Response",
+    y= "Data Value"
+  )
 
-facet_grid(.~year)
-  
-  
-
-
-
+ggsave("ny_boxplot.pdf", ny_boxplot, width=8, height=5)
 
 ```
+
+The boxplot shows the distribution of data values for each response level in 2006 and 2010, in New York. In 2006, we can see that the data values are highest in the "Good" response level, while the lowest data values are in the "Poor" response level. We see a similar trend in 2010. Moreover the highest range of data values is in the "Good" Response level. 
+
+
+##Problem 3
+
 
