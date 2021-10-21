@@ -53,6 +53,7 @@ instacart_plot =
     y= "Number of Items Ordered"
   )
 
+instacart_plot
 ggsave("instacart_plot.pdf", instacart_plot, width=8, height=5)
 ```
 
@@ -174,7 +175,8 @@ health_brfss %>%
 
 knitr::kable(states_2002,
              format="simple", 
-            col.names=str_to_title(names(states_2002))
+            col.names=str_to_title(names(states_2002)),
+            caption = "States Observed at 7 or More Locations in 2002"
             )
 ```
 
@@ -187,6 +189,12 @@ health_brfss %>%
   group_by(states) %>% 
   summarize(location_count = n()) %>% 
   filter(location_count>=7)
+
+knitr::kable(states_2010,
+             format="simple", 
+            col.names=str_to_title(names(states_2002)),
+            caption = "States Observed at 7 or More Locations in 2010"
+            )
 ```
 
 The table above shows 45 states were observed at 7 or more locations in 2010.
@@ -212,6 +220,8 @@ ggplot(mean_data, aes(x=year, y=avg_data_value, color=states)) +geom_line(se=FAL
     y= "Average Data Value"
   )
 
+spaghetti_plot
+
 ggsave("spaghetti_plot.pdf", spaghetti_plot, width=8, height=5)
 ```
 
@@ -232,6 +242,8 @@ health_brfss %>%
     y= "Data Value"
   )
 
+ny_boxplot
+
 ggsave("ny_boxplot.pdf", ny_boxplot, width=8, height=5)
 
 ```
@@ -239,6 +251,71 @@ ggsave("ny_boxplot.pdf", ny_boxplot, width=8, height=5)
 The boxplot shows the distribution of data values for each response level in 2006 and 2010, in New York. In 2006, we can see that the data values are highest in the "Good" response level, while the lowest data values are in the "Poor" response level. We see a similar trend in 2010. Moreover the highest range of data values is in the "Good" Response level. 
 
 
-##Problem 3
+## Problem 3
 
+Import Acceleration Data
+```{r}
+accel_df = 
+  read.csv("./data/accel_data.csv") %>% 
+  janitor::clean_names()
+```
 
+Tidying and Analyzing Data
+
+```{r}
+accel_tidy =
+  accel_df %>% 
+  pivot_longer (
+    activity_1:activity_1440,
+    names_to = "minute",
+    names_prefix = "activity_",
+    values_to= "activity_count") %>% 
+  mutate(
+    week = as.integer(week),
+    day_id=as.integer(day_id),
+    minute = as.integer(minute),
+    hour = as.integer(minute %/% 60),
+    day = factor(day, levels = c("Sunday", "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")),
+    weekday_vs_weekend = 
+      case_when(
+        day %in% c("Monday", "Tuesday","Wednesday","Thursday", "Friday") ~ "weekday",
+        day %in% c("Saturday", "Sunday") ~ "weekend")) 
+
+```
+
+The tidy data set has 50,400 observations described by 7 variables, thus there are 7 Columns and 50,400 rows.The variables are minute, hour, day, and week. Furthermore it shows the activity count as well.
+
+```{r}
+total_activity_count =
+accel_tidy %>% 
+  group_by(day) %>% 
+  summarize(total_activity= sum(activity_count, na.rm=TRUE)) 
+
+knitr::kable(total_activity_count,
+  caption =
+    "Total Activity Count per Day")
+```
+
+From analyzing the table, we see that activity count is much higher on Wednesday through Friday as opposed to the rest of the week. Furthermore, the activity count on Saturday is much lower compared to the activity count for the rest of the week. 
+
+```{r}
+accelerometer_plot=
+accel_tidy %>%
+  group_by(day,minute) %>%
+  ggplot(aes(x=minute, y=activity_count, color=day)) +
+  geom_point() +
+  labs(
+    title= "Activity Time Per Day",
+    x="Hour of the Day",
+    y="Activity Count"
+    ) +
+  scale_x_continuous(
+    breaks= c(0,240,480,720,960,1200,1440),
+    labels = c("0 hour","4 hour","8 hour","12 hour","16 hour","20 hour","24 hour"))
+
+accelerometer_plot
+  
+ggsave("accelerometer_plot.pdf", accelerometer_plot, width=8, height=5)  
+```
+
+There are a few patterns we can glean from this plot. For one, activity count is higher in the middle of the day(12 hour to 16 hour mark) as opposed to weekdays. Meanwhile on Fridays, activity count looks highest late in the day or the evening time. Moreover there seems to be high activity counts on Thursday mornings, whereas on Tuesdays there is activity count late in the evenings as well. Finally for Wendesdays, the activity count seems evenly distributed throughout the day.
